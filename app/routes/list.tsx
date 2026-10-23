@@ -1,6 +1,8 @@
 import type { Route } from "./+types/list";
 import { useLoaderData } from 'react-router'
+import type { User, Session } from '@supabase/supabase-js'
 import { supabase } from '../lib/supabase'
+import { useAuthStore } from "~/lib/auth-store";
 
 export function meta({}: Route.MetaArgs) {
   return [
@@ -12,27 +14,17 @@ export function meta({}: Route.MetaArgs) {
 export async function clientLoader() {
 
   //-------------------------------------------------------
-  // 로그인 시도
-  //-------------------------------------------------------
-  const { error } = await supabase.auth.signInWithPassword({
-      email: "gdhong@test.com",
-      password: "pass123",
-    })
-  
-  if (error) {
-    alert(`로그인 실패: ${error.message}`)
-    console.log("로그인 실패", error.message)
-    return { songs: [], user: null }
-  }
-
-  //-------------------------------------------------------
   // 세션 확인
   //-------------------------------------------------------
-  const { data: { session } } = await supabase.auth.getSession()
+  if (useAuthStore.getState().status === "loading") {
+    // 로그인 상태가 아직 로딩 중이면, 세션을 확인하고 상태를 업데이트
+    const { data: { session } } = await supabase.auth.getSession()
+    useAuthStore.getState().setSession(session)
+  }
 
-  if (!session) {
+  if (!useAuthStore.getState().session) {
     console.log("로그인 세션 없음")
-    return { songs: [], user: null }
+    return { songs: [] }
   }
 
   //-------------------------------------------------------
@@ -44,18 +36,19 @@ export async function clientLoader() {
   
   if (songsError) {
     console.log("노래 데이터 불러오기 실패", songsError.message)
-    return { songs: [], user: session.user }
+    return { songs: [] }
   }
 
-  return { songs: data, user: session.user }
+  return { songs: data }
 }
 
 export default function List() {
-  const { songs, user } = useLoaderData<typeof clientLoader>()
+  const { songs } = useLoaderData<typeof clientLoader>()
+  const user = useAuthStore(s => s.user)
 
-    return (
+  return (
     <div>
-      <h2>애창곡 리스트 ({user?.email})</h2>
+      <h2>애창곡 리스트 {user && `(${user.email})`}</h2>
       {songs.length === 0 ? (
         <p>등록된 노래가 없거나 데이터를 불러오지 못했습니다.</p>
       ) : (
