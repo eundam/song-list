@@ -24,6 +24,8 @@ interface AuthState {
   ) => Promise<void>
 
   signOut: () => Promise<void>
+
+  githubSignIn: () => Promise<void>
 }
 
 export const useAuthStore = create<AuthState>((set) => ({
@@ -33,7 +35,7 @@ export const useAuthStore = create<AuthState>((set) => ({
 
   setSession: (session) =>
     set({
-      session,
+      session: session,
       user: session?.user ?? null,
       status: session ? "authenticated" : "unauthenticated",
     }),
@@ -90,5 +92,25 @@ export const useAuthStore = create<AuthState>((set) => ({
       user: null, 
       status: "unauthenticated" 
     })
+  },
+
+  githubSignIn: async () => {
+    set({ status: "loading" })
+    
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'github',
+      options: {
+        // 인증 성공 후 돌아올 사이트 주소
+        redirectTo: window.location.origin, 
+      }
+    })
+
+    if (error) {
+      set({ status: "unauthenticated" })
+      throw new Error(error.message)
+    }
+
+    // 인증 성공 후, Supabase가 redirectTo 주소로 돌아오면
+    // clientLoader()에서 세션 확인 후 상태를 업데이트
   },
 }))
