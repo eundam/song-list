@@ -6,10 +6,10 @@ export type AuthStatus = "loading"
   | "authenticated" 
   | "unauthenticated"
 
-interface AuthState {
+interface AuthState {   //최종결과상태
   session: Session | null
   user: User | null
-  status: AuthStatus
+  status: AuthStatus //진행상태 데이터
 
   setSession: (session: Session | null) => void
   
